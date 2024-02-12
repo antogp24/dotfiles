@@ -1,0 +1,489 @@
+#+TITLE: Anto Emacs Configuration
+#+STARTUP: showeverything
+
+* Basic Configuration
+
+** Custom Global Variables
+#+begin_src emacs-lisp
+  (defconst anto/font "Iosevka-12")
+  (set-face-attribute 'default nil :font anto/font)
+
+  (if (eq system-type 'windows-nt)
+      (defconst anto/dev-dir "W:/")
+    (defconst anto/dev-dir "~/dev/"))
+
+  (if (eq system-type 'windows-nt)
+      (defconst anto/makescript "build.bat")
+    (defconst anto/makescript "build.sh"))
+
+  (defconst anto/tab-width 4)
+  (setq default-tab-width anto/tab-width)
+  (setq compilation-directory-locked nil)
+  (setq compilation-ask-about-save nil)
+#+end_src
+
+** Disabling Garbage Files
+#+begin_src emacs-lisp
+  (setq backup-inhibited t)
+  (setq make-backup-files nil)
+  (setq create-lockfiles nil)
+  (setq auto-save-default nil)
+  (setq ring-bell-function 'ignore)
+#+end_src
+
+** Adapted Vim Sets
+#+begin_src emacs-lisp
+  (setq scroll-margin 8)
+  (setq display-line-numbers-type 'relative)
+  (global-display-line-numbers-mode)
+  (global-hl-line-mode 1)
+#+end_src
+
+** Clean UI
+#+begin_src emacs-lisp
+  (setq inhibit-startup-message t)
+  (scroll-bar-mode -1)
+  (tooltip-mode -1)
+  (tool-bar-mode 0)
+  (menu-bar-mode -1)
+#+end_src
+
+** Smooth Scrolling
+#+begin_src emacs-lisp
+  (setq-default frame-resize-pixelwise t)
+  (setq pixel-scroll-precision-large-scroll-height 40.0)
+  (setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
+  (setq mouse-wheel-progressive-speed nil) ;; don't accelerate scrolling
+  (setq mouse-wheel-follow-mouse 't) ;; scroll window under mouse
+  (setq scroll-step 1)
+  (setq scroll-conservatively 1000)
+  (setq next-screen-context-lines 5)
+  (setq line-move-visual nil)
+#+end_src
+
+** Window Properties
+#+begin_src emacs-lisp
+  (setq next-line-add-newlines nil)
+  (setq-default truncate-lines t)
+  (setq truncate-partial-width-windows nil)
+  (add-hook 'window-setup-hook 'toggle-frame-maximized t)
+#+end_src
+
+** Custom Commands
+#+begin_src emacs-lisp
+  (defun anto/open-init()
+    (interactive)
+    (find-file (concat user-emacs-directory "Emacs.org")))
+
+  (defun anto/shell()
+    (interactive)
+    (split-window-below -7)
+    (other-window 1)
+    (shell))
+#+end_src
+
+** Compilation Mode
+#+begin_src emacs-lisp
+  (load-library "view")
+  (require 'cc-mode)
+  (require 'compile)
+#+end_src
+
+* Packages Configuration
+
+** Setup
+#+begin_src emacs-lisp
+  (require 'package)
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                           ("elpa"  . "https://elpa.gnu.org/packages/")
+                           ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+  (package-initialize)
+  (unless package-archive-contents
+    (package-refresh-contents))
+
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+end_src
+
+* Vim Bindings (Evil Mode)
+
+** Setup
+#+begin_src emacs-lisp
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+
+  (use-package evil
+    :init
+    (setq evil-want-integration t)
+    (setq evil-want-keybinding nil)
+    (setq evil-want-C-u-scroll t)
+    (setq evil-want-C-i-jump t)
+    :config
+    (evil-mode 1)
+    (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+
+    ;; Use visual line motions even outside of visual-line-mode buffers
+    (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+    (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+
+    (evil-set-undo-system 'undo-redo)
+    (evil-set-initial-state 'messages-buffer-mode 'normal)
+    (evil-set-initial-state 'dashboard-mode 'normal))
+#+end_src
+
+** Evil Extra Configuration
+#+begin_src emacs-lisp
+  (use-package evil-commentary
+    :init
+    (evil-commentary-mode))
+
+  (use-package evil-collection
+    :after evil
+    :ensure t
+    :config
+    (evil-collection-init))
+#+end_src
+
+* Language Configurations
+
+** Dumb Auto-Completion
+#+begin_src emacs-lisp
+  (use-package corfu
+    :custom
+    (corfu-auto t)
+    (corfu-auto-prefix 2)
+    (corfu-auto-delay 0.0)
+    :init
+    (global-corfu-mode))
+
+  (use-package emacs
+    :init
+    (setq tab-always-indent 'complete))
+
+  (use-package dabbrev
+    :config
+    (setq dabbrev-case-fold-search 'case-fold-search)
+    (setq dabbrev-upcase-means-case-search t)
+    (add-to-list 'dabbrev-ignored-buffer-regexps "\\` ")
+    (add-to-list 'dabbrev-ignored-buffer-modes 'doc-view-mode)
+    (add-to-list 'dabbrev-ignored-buffer-modes 'pdf-view-mode))
+
+  (use-package cape
+    :init
+    (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+    (add-to-list 'completion-at-point-functions #'cape-file)
+    (add-to-list 'completion-at-point-functions #'cape-keyword))
+#+end_src
+
+** Syntax Highlighting
+#+begin_src emacs-lisp
+  (use-package tree-sitter)
+  (use-package tree-sitter-langs)
+  (global-tree-sitter-mode)
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+#+end_src
+
+** C/C++
+
+#+begin_src emacs-lisp
+  (add-to-list 'compilation-error-regexp-alist
+	       '("\\([a-zA-Z0-9\\.]+\\)(\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?) \\(Warning:\\)?"
+		 1 2 (4) (5)))
+
+  (defun anto/compilation-hook ()
+    (make-local-variable 'truncate-lines)
+    (setq truncate-lines nil))
+
+  (add-hook 'compilation-mode-hook 'anto/compilation-hook)
+
+  (defun find-project-directory-recursive ()
+    "Recursively search for a makefile."
+    (interactive)
+    (if (file-exists-p anto/makescript) t
+      (cd "../")
+      (find-project-directory-recursive)))
+
+  (defun lock-compilation-directory ()
+    "The compilation process should NOT hunt for a makefile"
+    (interactive)
+    (setq compilation-directory-locked t)
+    (message "Compilation directory is locked."))
+
+  (defun unlock-compilation-directory ()
+    "The compilation process SHOULD hunt for a makefile"
+    (interactive)
+    (setq compilation-directory-locked nil)
+    (message "Compilation directory is roaming."))
+
+  (defun find-project-directory ()
+    "Find the project directory."
+    (interactive)
+    (setq find-project-from-directory (concat default-directory "../")) ;; Look back a directory
+    (switch-to-buffer-other-window "*compilation*")
+    (if compilation-directory-locked (cd last-compilation-directory)
+      (cd find-project-from-directory)
+      (find-project-directory-recursive)
+      (setq last-compilation-directory default-directory)))
+
+  (defun make-without-asking ()
+    "Make the current build."
+    (interactive)
+    (if (find-project-directory) (compile anto/makescript))
+    (other-window 1))
+
+  (define-key c-mode-map (kbd "M-m") 'make-without-asking)
+
+  (defun cproject (dirname)
+    "Open all C/C++ files in a directory"
+    (interactive "D")
+    (mapc #'find-file (directory-files-recursively dirname "\\.c$" nil))
+    (mapc #'find-file (directory-files-recursively dirname "\\.h$" nil)))
+
+  (defun anto/c-hook ()
+
+    ;; Space tabs
+    (setq c-default-style "linux"
+	  c-basic-offset anto/tab-width)
+    (setq tab-width anto/tab-width
+	  indent-tabs-mode nil)
+
+    ;; No hungry backspace
+    (c-toggle-auto-hungry-state -1)
+
+    ;; Semi-colon doesn't indent
+    (setq c-hanging-semi&comma-criteria '((lambda () 'stop)))
+
+    ;; Enable Autocompletion
+    ;; (setq dabbrev-case-replace t)
+    ;; (setq dabbrev-case-fold-search t)
+    ;; (setq dabbrev-upcase-means-case-search t)
+    ;; (abbrev-mode 1)
+    (electric-pair-mode 1)
+    (define-key c-mode-base-map [remap c-indent-line-or-region] #'completion-at-point)
+    )
+
+  (add-hook 'c-mode-common-hook 'anto/c-hook)
+  (add-hook 'c-mode-hook        'anto/c-hook)
+  (add-hook 'c++-mode-hook      'anto/c-hook)
+#+end_src
+
+** Python
+#+begin_src emacs-lisp
+  (defun python-run-main ()
+    (interactive)
+    (async-shell-command "python main.py"))
+
+  (add-hook 'python-mode-hook (lambda () (local-set-key (kbd "M-m") 'python-run-main)))
+#+end_src
+
+** GLSL
+#+begin_src emacs-lisp
+  (use-package glsl-mode)
+#+end_src
+
+* Custom Bindings
+
+#+begin_src emacs-lisp
+  (defun anto/modes-keybindings ()
+    (define-key isearch-mode-map (kbd "<up>") 'isearch-repeat-backward)
+    (define-key isearch-mode-map (kbd "<down>") 'isearch-repeat-forward)
+    (define-key isearch-mode-map (kbd "<left>") 'isearch-repeat-backward)
+    (define-key isearch-mode-map (kbd "<right>") 'isearch-repeat-forward)
+    (define-key isearch-mode-map (kbd "C-p") 'isearch-repeat-backward)
+    (define-key isearch-mode-map (kbd "C-n") 'isearch-repeat-forward)    
+    )
+  (anto/modes-keybindings)
+
+  (defvar anto/key-map
+    (let ((map (make-sparse-keymap)))
+      (global-set-key (kbd "C-v") 'yank)
+      (global-set-key (kbd "C-,") 'other-window)
+      (global-set-key (kbd "M-,") 'other-window)
+      (global-set-key (kbd "C-z") 'undo)
+      (global-set-key (kbd "C-y") 'undo-redo)
+      (global-set-key (kbd "M-k") 'ido-kill-buffer)
+      (global-set-key (kbd "C-s") 'save-buffer)
+      (global-set-key (kbd "M-0") 'delete-window)
+      (global-set-key (kbd "M-1") 'delete-other-windows)
+      (global-set-key (kbd "M-2") 'split-window-below)
+      (global-set-key (kbd "M-3") 'split-window-right)
+      (global-set-key (kbd "M-;") 'View-back-to-mark)
+      (global-set-key (kbd "S-<tab>") 'indent-region)
+      (global-set-key (kbd "M-f") 'isearch-forward)
+      ;; (global-set-key (kbd "M-i") 'ido-switch-buffer)
+      ;; (global-set-key (kbd "M-o") 'ido-find-file)
+      (global-set-key (kbd "M-<f4>") 'save-buffers-kill-terminal)
+      (global-set-key (kbd "C-<backspace>") 'backward-kill-word)
+      (global-set-key (kbd "C-e") 'end-of-line)
+      (global-set-key (kbd "C-a") 'beginning-of-line)
+      (global-set-key (kbd "M--") 'text-scale-decrease)
+      (global-set-key (kbd "M-=") 'text-scale-increase)
+      (global-set-key (kbd "M-g") 'goto-line)
+      (global-set-key (kbd "M-r") 'query-replace)
+      (global-set-key (kbd "M-t") 'anto/shell)
+      (global-set-key (kbd "C-M-;") 'anto/open-init)
+
+      (global-set-key (kbd "C-j") 'forward-paragraph)
+      (global-set-key (kbd "C-k") 'backward-paragraph)
+      ;; (global-set-key (kbd "C-h") 'left-word)
+      ;; (global-set-key (kbd "C-l") 'right-word)
+
+      map)
+    "Anto keymappings")
+#+end_src
+
+* Style Configuration
+
+** Theme Colorscheme
+#+begin_src emacs-lisp
+  (set-face-italic-p 'italic nil)
+  (use-package doom-themes
+    :ensure t
+    :config
+    (setq doom-themes-enable-bold nil
+	  doom-themes-enable-italic nil)
+    (load-theme 'doom-one t)
+    (doom-themes-org-config))
+#+end_src
+
+** Rainbow Delimeters
+#+begin_src emacs-lisp
+  (use-package rainbow-delimiters
+    :hook (prog-mode . rainbow-delimiters-mode))
+#+end_src
+
+** Modeline
+#+begin_src emacs-lisp
+  (use-package doom-modeline
+    :ensure t
+    :init (doom-modeline-mode 1)
+    :config
+    (setq doom-modeline-icon nil))
+#+end_src
+
+** Which Key
+#+begin_src emacs-lisp
+  (use-package which-key
+    :init (which-key-mode)
+    :diminish which-key-mode
+    :config
+    (setq which-key-idle-delay 0.05))
+#+end_src
+
+** Counsel
+#+begin_src emacs-lisp
+  (use-package counsel
+    :bind (("M-x" . counsel-M-x)
+	   ("M-i" . counsel-ibuffer)
+	   ("M-o" . counsel-find-file)))
+#+end_src
+
+** Helpful
+#+begin_src emacs-lisp
+  (use-package helpful
+    :custom
+    (counsel-describe-function-function #'helpful-callable)
+    (counsel-describe-variable-function #'helpful-variable)
+    :bind
+    ([remap describe-function] . counsel-describe-function)
+    ([remap describe-command] . helpful-command)
+    ([remap describe-variable] . counsel-describe-variable)
+    ([remap describe-key] . helpful-key))
+#+end_src
+
+** Ivy
+#+begin_src emacs-lisp
+  (use-package ivy
+    :diminish
+    :bind (("C-s" . swiper)
+	   :map ivy-minibuffer-map
+	   ("C-n" . ivy-next-line)
+	   ("C-p" . ivy-previous-line)
+	   :map ivy-switch-buffer-map
+	   ("C-n" . ivy-next-line)
+	   ("C-p" . ivy-previous-line)
+	   :map ivy-reverse-i-search-map
+	   ("C-n" . ivy-next-line)
+	   ("C-p" . ivy-previous-line))
+    :config
+    (ivy-mode 1))
+
+  (use-package ivy-rich
+    :init
+    (ivy-rich-mode 1))
+#+end_src
+
+* Project Management
+
+** Projectile
+#+begin_src emacs-lisp
+  (use-package projectile
+    :diminish projectile-mode
+    :config (projectile-mode)
+    :custom ((projectile-completion-system 'ivy))
+    :bind-keymap
+    ("C-c p" . projectile-command-map)
+    :init
+    (when (file-directory-p anto/dev-dir)
+      (setq projectile-projct-search-path '(anto/dev-dir)))
+    (setq projectile-switch-project-action #'projectile-dired))
+
+  (use-package counsel-projectile
+    :config (counsel-projectile-mode))
+#+end_src
+
+** Magit
+#+begin_src emacs-lisp
+  (use-package magit
+    :custom
+    (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+#+end_src
+
+
+* Org Mode
+
+** Setup
+#+begin_src emacs-lisp
+      (defun anto/org-mode-setup ()
+        (org-indent-mode))
+
+      (use-package org
+        :hook (org-mode . anto/org-mode-setup))
+#+end_src
+
+** Center Org Buffers
+#+begin_src emacs-lisp
+  (defun efs/org-mode-visual-fill ()
+    (setq visual-fill-column-width 100
+	  visual-fill-column-center-text t)
+    (visual-fill-column-mode 1))
+
+  (use-package visual-fill-column
+    :hook (org-mode . efs/org-mode-visual-fill))
+#+end_src
+
+** Babel Languages
+#+begin_src emacs-lisp
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)))
+
+  (push '("conf-unix" . conf-unix) org-src-lang-modes)
+#+end_src
+
+** Auto-Tangle Configuration File
+#+begin_src emacs-lisp
+  ;; Automatically tangle our Emacs.org config file when we save it
+  (defun anto/org-babel-tangle-config ()
+    (when (string-equal (buffer-file-name)
+			(expand-file-name "~/.emacs.d/Emacs.org"))
+      ;; Dynamic scoping to the rescue
+      (let ((org-confirm-babel-evaluate nil))
+	(org-babel-tangle))))
+
+  (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'anto/org-babel-tangle-config)))
+
+#+end_src
+
