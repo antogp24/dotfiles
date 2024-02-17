@@ -7,6 +7,7 @@
 #+begin_src emacs-lisp
   (defconst anto/font "Iosevka-12")
   (set-face-attribute 'default nil :font anto/font)
+  (set-default-coding-systems 'utf-8)
 
   (if (eq system-type 'windows-nt)
       (defconst anto/dev-dir "W:/")
@@ -280,7 +281,16 @@
 
 ** GLSL
 #+begin_src emacs-lisp
-  (use-package glsl-mode)
+  (use-package glsl-mode
+    :ensure t)
+#+end_src
+
+** Markdown
+#+begin_src emacs-lisp
+  (use-package markdown-mode
+    :ensure t
+    :mode ("README\\.md\\'" . gfm-mode)
+    :init (setq markdown-command "multimarkdown"))
 #+end_src
 
 * Custom Bindings
@@ -339,13 +349,17 @@
 ** Theme Colorscheme
 #+begin_src emacs-lisp
   (set-face-italic-p 'italic nil)
-  (use-package doom-themes
+  ;; (use-package doom-themes
+  ;;   :ensure t
+  ;;   :config
+  ;;   (setq doom-themes-enable-bold nil
+  ;;         doom-themes-enable-italic nil)
+  ;;   (load-theme 'doom-one t)
+  ;;   (doom-themes-org-config))
+  (use-package modus-themes
     :ensure t
     :config
-    (setq doom-themes-enable-bold nil
-	  doom-themes-enable-italic nil)
-    (load-theme 'doom-one t)
-    (doom-themes-org-config))
+    (load-theme 'modus-vivendi t))
 #+end_src
 
 ** Rainbow Delimeters
@@ -376,8 +390,8 @@
 #+begin_src emacs-lisp
   (use-package counsel
     :bind (("M-x" . counsel-M-x)
-	   ("M-i" . counsel-ibuffer)
-	   ("M-o" . counsel-find-file)))
+           ("M-i" . counsel-ibuffer)
+           ("M-o" . counsel-find-file)))
 #+end_src
 
 ** Helpful
@@ -398,15 +412,15 @@
   (use-package ivy
     :diminish
     :bind (("C-s" . swiper)
-	   :map ivy-minibuffer-map
-	   ("C-n" . ivy-next-line)
-	   ("C-p" . ivy-previous-line)
-	   :map ivy-switch-buffer-map
-	   ("C-n" . ivy-next-line)
-	   ("C-p" . ivy-previous-line)
-	   :map ivy-reverse-i-search-map
-	   ("C-n" . ivy-next-line)
-	   ("C-p" . ivy-previous-line))
+           :map ivy-minibuffer-map
+           ("C-n" . ivy-next-line)
+           ("C-p" . ivy-previous-line)
+           :map ivy-switch-buffer-map
+           ("C-n" . ivy-next-line)
+           ("C-p" . ivy-previous-line)
+           :map ivy-reverse-i-search-map
+           ("C-n" . ivy-next-line)
+           ("C-p" . ivy-previous-line))
     :config
     (ivy-mode 1))
 
@@ -478,10 +492,10 @@
   ;; Automatically tangle our Emacs.org config file when we save it
   (defun anto/org-babel-tangle-config ()
     (when (string-equal (buffer-file-name)
-			(expand-file-name "~/.emacs.d/Emacs.org"))
+                        (expand-file-name "~/.emacs.d/Emacs.org"))
       ;; Dynamic scoping to the rescue
       (let ((org-confirm-babel-evaluate nil))
-	(org-babel-tangle))))
+        (org-babel-tangle))))
 
   (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'anto/org-babel-tangle-config)))
 
